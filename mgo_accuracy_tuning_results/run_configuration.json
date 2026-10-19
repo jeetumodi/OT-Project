@@ -1,0 +1,26 @@
+{
+  "search": {
+    "population_size": 8,
+    "max_iterations": 5,
+    "cv_folds": 3,
+    "nn_epochs": 50,
+    "seed": 42
+  },
+  "objective": "cv_accuracy",
+  "quick": false,
+  "best": {
+    "nn_learning_rate": 0.00630957344480193,
+    "nn_dropout": 0.4,
+    "nn_hidden_1": 256,
+    "nn_hidden_2": 128,
+    "embedding_dim": 64,
+    "batch_size": 64,
+    "nn_weight_decay": 1e-05,
+    "xgb_learning_rate": 0.1,
+    "xgb_max_depth": 9,
+    "xgb_n_estimators": 300,
+    "xgb_min_child_weight": 1,
+    "xgb_subsample": 1.0,
+    "xgb_colsample_bytree": 1.0
+  }
+}
