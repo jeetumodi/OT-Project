@@ -168,9 +168,11 @@ def score_position(position, X, y, cfg, quick, cache) -> float:
         X_fold_train = transformer.fit_transform(X.iloc[train_idx]).astype(np.float32)
         X_fold_valid = transformer.transform(X.iloc[valid_idx]).astype(np.float32)
         prediction = fit_predict(X_fold_train, y[train_idx], X_fold_valid, params, cfg, cfg.seed + fold)
-        scores.append(accuracy_score(y[valid_idx], prediction))
+        # Macro-F1 weights each disaster class equally, preventing the Flood
+        # majority class from dominating the MGO fitness function.
+        scores.append(f1_score(y[valid_idx], prediction, average="macro", zero_division=0))
     fitness = 1 - float(np.mean(scores)); cache[key] = fitness
-    log(f"complete: CV accuracy={1-fitness:.5f}; fitness={fitness:.5f}")
+    log(f"complete: CV macro-F1={1-fitness:.5f}; fitness={fitness:.5f}")
     return fitness
 
 def mgo_candidates(population, best, iteration, maximum, rng):
@@ -203,8 +205,8 @@ def run_mgo(X, y, cfg, quick):
         fitness = np.array([score_position(p, X, y, cfg, quick, cache) for p in expanded])
         survivors = np.argsort(fitness)[:cfg.population_size]; population = expanded[survivors]
         if fitness[survivors[0]] < best_fitness: best_fitness, best_position = fitness[survivors[0]], population[0].copy()
-        history.append({"iteration": iteration, "best_cv_accuracy": 1-best_fitness, "unique_configurations": len(cache), **decode_hyperparameters(best_position, quick)})
-        log(f"MGO {iteration}/{cfg.max_iterations}: best CV accuracy={1-best_fitness:.5f}")
+        history.append({"iteration": iteration, "best_cv_macro_f1": 1-best_fitness, "unique_configurations": len(cache), **decode_hyperparameters(best_position, quick)})
+        log(f"MGO {iteration}/{cfg.max_iterations}: best CV macro-F1={1-best_fitness:.5f}")
     return decode_hyperparameters(best_position, quick), pd.DataFrame(history)
 
 def main():
@@ -219,11 +221,11 @@ def main():
     log(f"Final held-out evaluation with best training-CV configuration: {best}")
     transformer = make_preprocessor(X_train); train_array = transformer.fit_transform(X_train).astype(np.float32); test_array = transformer.transform(X_test).astype(np.float32)
     prediction = fit_predict(train_array, y_train, test_array, best, cfg, cfg.seed)
-    metrics = {"accuracy": accuracy_score(y_test, prediction), "precision_weighted": precision_score(y_test, prediction, average="weighted", zero_division=0), "recall_weighted": recall_score(y_test, prediction, average="weighted", zero_division=0), "f1_weighted": f1_score(y_test, prediction, average="weighted", zero_division=0), "mgo_seconds": elapsed, **best}
-    # Keep accuracy-optimized results separate from the completed weighted-F1 run.
-    output = ROOT / "mgo_accuracy_tuning_results"; output.mkdir(exist_ok=True)
+    metrics = {"accuracy": accuracy_score(y_test, prediction), "precision_weighted": precision_score(y_test, prediction, average="weighted", zero_division=0), "recall_weighted": recall_score(y_test, prediction, average="weighted", zero_division=0), "f1_weighted": f1_score(y_test, prediction, average="weighted", zero_division=0), "f1_macro": f1_score(y_test, prediction, average="macro", zero_division=0), "mgo_seconds": elapsed, **best}
+    # Keep macro-F1 results separate from prior accuracy- and weighted-F1-tuned runs.
+    output = ROOT / "mgo_macro_f1_tuning_results"; output.mkdir(exist_ok=True)
     pd.DataFrame([metrics]).to_csv(output / "best_configuration_and_test_metrics.csv", index=False); history.to_csv(output / "mgo_tuning_history.csv", index=False)
-    (output / "run_configuration.json").write_text(json.dumps({"search": asdict(cfg), "objective": "cv_accuracy", "quick": args.quick, "best": best}, indent=2), encoding="utf-8")
+    (output / "run_configuration.json").write_text(json.dumps({"search": asdict(cfg), "objective": "cv_macro_f1", "quick": args.quick, "best": best}, indent=2), encoding="utf-8")
     for name, value in metrics.items(): log(f"{name}={value}")
     log(f"Saved outputs in {output}")
 

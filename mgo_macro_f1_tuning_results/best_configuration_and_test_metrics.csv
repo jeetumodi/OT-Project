@@ -1,0 +1,2 @@
+accuracy,precision_weighted,recall_weighted,f1_weighted,f1_macro,mgo_seconds,nn_learning_rate,nn_dropout,nn_hidden_1,nn_hidden_2,embedding_dim,batch_size,nn_weight_decay,xgb_learning_rate,xgb_max_depth,xgb_n_estimators,xgb_min_child_weight,xgb_subsample,xgb_colsample_bytree
+0.9113607990012484,0.8999749030955212,0.9113607990012484,0.9045329706675331,0.7389973211670426,6651.477920999983,0.00630957344480193,0.4,256,128,64,64,1e-05,0.05,9,300,5,0.7,0.7
